@@ -13,10 +13,15 @@ class Adv(web.View):
     def session(self):
         return self.request["session"]
 
+    @property
+    def user_id(self):
+        return int(self.request.match_info["user_id"])
+
     async def get(self):
         json_data = await self.request.json()
-        q = select(Advertisements).where(Advertisements.owner_id == int(json_data["user_id"])) \
-            if json_data.get("user_id") else select(Advertisements)
+        if not int(json_data.get("user_id")):
+            raise web.HTTPConflict(text=str({"error": "user provide"}), content_type="application/json")
+        q = select(Advertisements).where(Advertisements.owner_id == int(json_data["user_id"]))
         result = await self.session.execute(q)
         db_resp = result.fetchall()
         context = dict()
@@ -52,7 +57,26 @@ class Adv(web.View):
         return web.json_response(context)
 
     async def patch(self):
-        pass
+        json_data = await self.request.json()
+        q = select(Advertisements) \
+            .where(Advertisements.id == int(self.request.match_info["ad_id"])) \
+            .where(Advertisements.owner_id == self.user_id)
+        result = await self.session.execute(q)
+        adv = result.scalar()
+        if not adv:
+            raise web.HTTPNotFound()
+        if json_data.get("title"):
+            adv.title = json_data.get("title")
+        if json_data.get("description"):
+            adv.description = json_data.get("description")
+        # self.session.add(adv)
+        await self.session.commit()
+        context = {
+            "status": "ok",
+            "adv_id": adv.id,
+            "created_at": str(adv.created_at)
+        }
+        return web.json_response(context)
 
     async def delete(self):
         json_data = await self.request.json()

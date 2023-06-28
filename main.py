@@ -32,6 +32,7 @@ app.add_routes(
         web.post("/user", UsersManage),
         web.get("/adv", Adv),
         web.post("/adv", Adv),
+        web.patch("/adv/{user_id:\d+}/{ad_id:\d+}", Adv),
         web.delete("/adv", Adv),
     ]
 )
